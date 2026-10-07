@@ -1,0 +1,1 @@
+(guildai :fetcher github :repo "waterson/guildai-el" :files ("guildai.el"))

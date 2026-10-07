@@ -1,0 +1,109 @@
+# -*- mode: org; fill-column: 80 -*-
+#+title: guildai.el
+
+Run Guild agents from Emacs. Create and resume sessions, review prompts with
+selected editor context, read replies, and interrupt execution.
+
+* Installation
+
+Requires Emacs 29.1 or later. The package uses built-in libraries and has no
+external runtime dependencies. It is not yet published on MELPA.
+
+For a local checkout:
+
+#+begin_src emacs-lisp
+(add-to-list 'load-path "~/src/waterson/guildai-el")
+(require 'guildai)
+(setq guildai-account "YOUR-ACCOUNT")
+;; Optional: skip workspace selection.
+;; (setq guildai-workspace "YOUR-ACCOUNT~YOUR-WORKSPACE")
+;; Optional: choose an installed agent rather than the workspace default.
+;; (setq guildai-agent "YOUR-ACCOUNT~YOUR-AGENT")
+#+end_src
+
+* Authentication
+
+Create an account API key using an authenticated Guild CLI:
+
+#+begin_src sh
+guild api-key create --name emacs \
+  --scopes "workspaces:read,agents:read,sessions:write"
+#+end_src
+
+Store the returned credential through Emacs auth-source. For example, an entry
+in =~/.authinfo.gpg=:
+
+#+begin_example
+machine app.guild.ai login guildai password KEY-ID:SECRET
+#+end_example
+
+The package sends this credential as a Bearer token. Do not put it in your
+Emacs configuration. You can customize =guildai-credential-function= to use
+another secret provider. It must return the complete =KEY-ID:SECRET= string.
+
+=guildai-api-url= defaults to =https://app.guild.ai/api=. For a local Guild
+server use =http://localhost:5001/api= and a matching auth-source host entry.
+Internal deployments requiring Google IAP are not supported.
+
+Workspace selection uses the account's public workspace endpoint, which
+accepts account API keys. Configure =guildai-account= or enter it when prompted.
+Keys without the required scopes cannot perform the corresponding operations.
+
+* Usage
+
+| Command                 | Action                                      |
+|-------------------------+---------------------------------------------|
+| =guildai=               | Select a workspace and draft a new session  |
+| =guildai-sessions=      | Browse sessions; RET resumes one            |
+| =guildai-send-region=   | Draft a prompt with selected text           |
+| =guildai-send-buffer=   | Draft a prompt with accessible buffer text  |
+| =guildai-compose=       | Draft a follow-up from a session buffer     |
+| =guildai-send=          | Send the draft (C-c C-c)                     |
+| =guildai-refresh=       | Fetch new events (g in a session)            |
+| =guildai-interrupt=     | Interrupt execution (i in a session)         |
+| =guildai-open-in-browser= | Open the web session (b in a session)      |
+
+Every prompt opens in an editable draft. Region and buffer commands include
+only the selected or accessible text and the buffer name. Review the draft
+before sending; no context is transmitted until you press C-c C-c. Replies do
+not modify your source buffers.
+
+Open session buffers poll every =guildai-poll-interval= seconds. Events are
+read chronologically across all pages, with persisted IDs used to resume and
+avoid duplicate display. Closing a session buffer stops polling. A polling
+failure appears in the transcript and stops automatic polling; g requests
+another fetch. Reopen the session to restart automatic polling.
+
+Failed sends preserve the draft. Requests are not automatically retried. If a
+send loses its response, inspect the session before resending: the server may
+have accepted it. While a send is pending the draft is read-only.
+
+This initial client displays text and multipart text; other content is shown
+as JSON. Rich attachments, interactive agent prompts, browser device login,
+and WebSocket token streaming are not implemented. Use the browser for agent
+requests requiring interactive controls.
+
+* Development
+
+#+begin_src sh
+make check
+#+end_src
+
+To run the additional metadata check, clone =purcell/package-lint= into
+=.package-lint= and run =make lint=. CI runs this check too.
+
+The ERT suite uses mocked HTTP responses and does not require credentials.
+Live authentication, permissions, and agent execution need an account-level
+smoke test before a release. CI checks Emacs 29.4 and 30.2.
+
+* MELPA
+
+The intended upstream is =https://github.com/waterson/guildai-el=; this local
+project does not create or publish that repository. An example recipe is in
+=melpa-recipe=. Before submission, establish the upstream, run package-lint,
+test the recipe build and installation, and exercise the client against Guild.
+MELPA reviews package quality and maturity; acceptance is not automatic.
+
+* License
+
+GPL-3.0-or-later. See COPYING.

@@ -1,0 +1,18 @@
+name: Check
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs-version: ['29.4', '30.2']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs-version }}
+      - uses: actions/checkout@v4
+        with:
+          repository: purcell/package-lint
+          path: .package-lint
+      - run: make check lint
